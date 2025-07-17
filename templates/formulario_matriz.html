@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registrar Autores por Publicación</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f8f9fa;
+      padding: 40px;
+      max-width: 1000px;
+      margin: auto;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    .autor-entry {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+    .acciones {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .mensaje {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>➕ Registrar Autores en Matriz Intermedia</h2>
+
+  <label for="titulo">Título del libro:</label>
+  <input id="titulo" list="titulos" placeholder="Escribe o selecciona un título" required>
+  <datalist id="titulos"></datalist>
+
+  <input type="text" id="codigo_publicacion" placeholder="Código por Publicación" readonly>
+
+  <div id="autoresContainer">
+    <div class="autor-entry">
+      <input class="cedula" list="cedulas" placeholder="Cédula">
+      <input class="nombre" list="nombres" placeholder="Nombre del autor">
+    </div>
+  </div>
+
+  <datalist id="cedulas"></datalist>
+  <datalist id="nombres"></datalist>
+
+  <div class="acciones">
+    <button onclick="agregarAutor()">➕ Agregar otro autor</button>
+    <br><br>
+    <button onclick="guardarAutores()">💾 Guardar todos</button>
+    <div class="mensaje" id="mensaje"></div>
+  </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button type="button" onclick="window.location.href='/'">
+        Volver al inicio
+        </button>
+    </div>
+
+  <script>
+    let publicaciones = [];
+    let autores = [];
+
+    window.onload = async function () {
+        const res1 = await fetch("/api/publicaciones");
+        publicaciones = await res1.json();
+        const dlTitulos = document.getElementById("titulos");
+        publicaciones.forEach(pub => {
+            const opt = document.createElement("option");
+            opt.value = pub.titulo;
+            opt.dataset.codigo = pub.codigo;
+            dlTitulos.appendChild(opt);
+        });
+
+        const res2 = await fetch("/api/autores");
+        autores = await res2.json();
+        const dlCedulas = document.getElementById("cedulas");
+        const dlNombres = document.getElementById("nombres");
+        autores.forEach(a => {
+            const opt1 = document.createElement("option");
+            opt1.value = a.documento;
+            dlCedulas.appendChild(opt1);
+            const opt2 = document.createElement("option");
+            opt2.value = a.nombre;
+            dlNombres.appendChild(opt2);
+        });
+
+        // 🔁 Activar sincronización en el primer autor precargado
+        const cedulaInput = document.querySelector(".cedula");
+        const nombreInput = document.querySelector(".nombre");
+
+        cedulaInput.addEventListener("change", function () {
+            const autor = autores.find(a => a.documento === this.value);
+            if (autor) nombreInput.value = autor.nombre;
+        });
+
+        nombreInput.addEventListener("change", function () {
+            const autor = autores.find(a => a.nombre === this.value);
+            if (autor) cedulaInput.value = autor.documento;
+        });
+    };
+
+    document.getElementById("titulo").addEventListener("change", function () {
+      const tituloIngresado = this.value;
+      const encontrada = publicaciones.find(p => p.titulo === tituloIngresado);
+      if (encontrada) {
+        document.getElementById("codigo_publicacion").value = encontrada.codigo;
+      } else {
+        document.getElementById("codigo_publicacion").value = "";
+      }
+    });
+
+    function agregarAutor() {
+        const container = document.getElementById("autoresContainer");
+        const div = document.createElement("div");
+        div.className = "autor-entry";
+
+        const cedulaInput = document.createElement("input");
+        cedulaInput.classList.add("cedula");
+        cedulaInput.setAttribute("list", "cedulas");
+        cedulaInput.setAttribute("placeholder", "Cédula");
+
+        const nombreInput = document.createElement("input");
+        nombreInput.classList.add("nombre");
+        nombreInput.setAttribute("list", "nombres");
+        nombreInput.setAttribute("placeholder", "Nombre del autor");
+
+        // 🔁 SINCRONIZACIÓN CÉDULA → NOMBRE
+        cedulaInput.addEventListener("change", function () {
+            const autor = autores.find(a => a.documento === this.value);
+            if (autor) {
+            nombreInput.value = autor.nombre;
+            }
+        });
+
+        // 🔁 SINCRONIZACIÓN NOMBRE → CÉDULA
+        nombreInput.addEventListener("change", function () {
+            const autor = autores.find(a => a.nombre === this.value);
+            if (autor) {
+            cedulaInput.value = autor.documento;
+            }
+        });
+
+        div.appendChild(cedulaInput);
+        div.appendChild(nombreInput);
+        container.appendChild(div);
+    }
+
+
+    async function guardarAutores() {
+      const codigo = document.getElementById("codigo_publicacion").value;
+      const titulo = document.getElementById("titulo").value;
+
+      if (!codigo || !titulo) {
+        alert("Debes seleccionar un título válido.");
+        return;
+      }
+
+      const cedulas = document.querySelectorAll(".cedula");
+      const nombres = document.querySelectorAll(".nombre");
+
+      const registros = [];
+        const cedulasUnicas = new Set();
+        let duplicado = false;
+
+        for (let i = 0; i < cedulas.length; i++) {
+        const doc = cedulas[i].value.trim();
+        const nom = nombres[i].value.trim();
+
+        if (doc && nom) {
+            if (cedulasUnicas.has(doc)) {
+            duplicado = true;
+            break;
+            }
+            cedulasUnicas.add(doc);
+            registros.push({
+            codigo,
+            titulo,
+            documento: doc,
+            nombre: nom
+            });
+        }
+      }
+
+        if (duplicado) {
+        alert("⚠️ No puedes registrar al mismo autor más de una vez.");
+        return;
+        }
+
+      if (registros.length === 0) {
+        alert("Debes agregar al menos un autor.");
+        return;
+      }
+
+      const res = await fetch("/guardar-matriz", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ registros })
+      });
+
+      const data = await res.json();
+      const mensaje = document.getElementById("mensaje");
+      if (data.status === "ok") {
+        mensaje.textContent = "✅ Autores agregados correctamente.";
+        mensaje.style.color = "green";
+      } else {
+        mensaje.textContent = "❌ Error al guardar.";
+        mensaje.style.color = "red";
+      }
+    }
+  </script>
+</body>
+</html>

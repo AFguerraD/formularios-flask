@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agregar Publicación</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f2f4f8;
+      padding: 40px 20px;
+      max-width: 1200px;
+      margin: auto;
+      color: #333;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 28px;
+      color: #222;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .campo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    input, select, textarea {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      width: 100%;
+      background-color: white;
+    }
+
+    textarea {
+      grid-column: span 2;
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 12px 24px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;    
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .mensaje {
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .campo {
+        grid-template-columns: 1fr;
+      }
+      textarea {
+        grid-column: span 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>📚 Registrar Nueva Publicación</h2>
+
+  <form id="formPublicacion">
+    <input name="codigo_publicacion" id="codigo_publicacion" placeholder="Código por Publicación" readonly>
+
+    <div class="campo">
+      <input name="titulo_libro" placeholder="Título del libro" required>
+      <input name="subtitulo" placeholder="Subtítulo">
+    </div>
+
+    <div class="campo">
+      <input name="isbn" id="isbn" placeholder="ISBN">
+      <input name="isbn2" id="isbn2" placeholder="ISBN2">
+    </div>
+
+    <div class="campo">
+      <input name="eisbn" id="eisbn" placeholder="eISBN">
+      <input name="eisbn2"id="eisbn2" placeholder="eISBN2">
+    </div>
+
+    <div class="campo">
+      <input name="doi_libro" placeholder="DOI libro">
+      <input name="doi_capitulo" placeholder="DOI capítulo">
+    </div>
+
+    <div class="campo">
+      <input name="registro_dinda" placeholder="Número de registro de DINDA">
+      <input name="titulo_capitulo" placeholder="Título de capítulo">
+    </div>
+
+    <div class="campo">
+      <input name="anio" placeholder="Año de publicación">
+      <input name="mes" placeholder="Mes de publicación">
+    </div>
+
+    <input type="date" name="fecha" placeholder="Fecha de publicación">
+
+    <div class="campo">
+      <input name="nombre_proyecto" placeholder="Nombre del proyecto">
+      <input name="codigo_proyecto" placeholder="Código del proyecto">
+    </div>
+
+    <div class="campo">
+      <input name="financiador" placeholder="Financiador del proyecto (si aplica)">
+      <input name="linea_editorial" placeholder="Línea editorial">
+      
+    </div>
+
+    <div class="campo">
+      <input name="tipologia" placeholder="Tipología">
+      <input name="thema" placeholder="Thema">
+      
+    </div>
+
+    <div class="campo">
+      <input name="area_conocimiento" placeholder="Área de conocimiento">
+      <input name="materia" placeholder="Materia">
+      
+    </div>
+
+    <div class="campo">
+      <input name="palabras_clave" placeholder="Palabras clave">
+      <input name="nombre_coleccion" placeholder="Nombre Colección">
+      
+    </div>
+
+    <div class="campo">
+      <input name="isbn_issn_coleccion" placeholder="ISBN/ISSN Colección">
+      <input name="formato" placeholder="Formato">
+      
+    </div>
+
+    <div class="campo">
+      <input name="url_repositorio" placeholder="URL repositorio">
+      <input name="idioma" placeholder="Idioma">
+      
+    </div>
+
+    <textarea name="resumen" placeholder="Resumen (60 palabras)"></textarea>
+
+    <div class="campo">
+      <input name="ods" placeholder="Objetivo desarrollo sostenible">
+      <input name="rectoria_normalizada" placeholder="SEDE">
+    </div>
+
+    <div class="campo">
+      <input name="centro_universitario" placeholder="Centro Universitario">
+      <input name="origen" placeholder="Origen">
+      <input type="text" name="origen_otro" id="origen_otro" placeholder="Especificar otro origen" style="display:none;" />
+    </div>
+
+    <div class="campo">
+      
+      <input type="date" name="fecha_diligenciamiento" placeholder="Fecha de publicación">
+    </div>
+
+    <button type="submit">Guardar Publicación</button>
+    <div class="mensaje" id="mensaje"></div>
+  </form>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <button type="button" onclick="window.location.href='/'">
+      Volver al inicio
+    </button>
+  </div>
+
+  <script>
+    document.getElementById("formPublicacion").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const form = document.getElementById("formPublicacion");
+      const formData = new FormData(form);
+      const isbn = (formData.get("isbn") || "").replace(/\D/g, "");
+      const eisbn = (formData.get("eisbn") || "").replace(/\D/g, "");
+      let codigo = "";
+      if (isbn && eisbn) {
+        codigo = isbn.slice(-4) + eisbn.slice(-4);
+      } else if (isbn) {
+        codigo = isbn.slice(-4) + "0000";
+      } else if (eisbn) {
+        codigo = eisbn.slice(-4) + "0000";
+      }
+      if (codigo.length === 8) {
+        codigo = codigo.slice(0, 4) + "-" + codigo.slice(4);
+      }
+      document.getElementById("codigo_publicacion").value = codigo;
+      formData.set("codigo_publicacion", codigo);
+      const datos = Object.fromEntries(formData.entries());
+      console.log("ENVIANDO:", datos);
+      fetch("/guardar-publicacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos)
+      })
+      .then(res => res.json())
+      .then(data => {
+        const mensaje = document.getElementById("mensaje");
+        if (data.status === "duplicado") {
+          mensaje.textContent = "❌ Ya existe una publicación con alguno de esos códigos (ISBN, eISBN).";
+          mensaje.style.color = "red";
+        } else if (data.status === "ok") {
+          const codigo = document.getElementById("codigo_publicacion").value;
+          mensaje.innerHTML = `✅ Publicación registrada correctamente.<br><strong>📘 Código por Publicación:</strong> ${codigo}`;
+          mensaje.style.color = "green";
+          document.getElementById("formPublicacion").reset();
+          document.getElementById("codigo_publicacion").value = "";
+        } else {
+          mensaje.textContent = "⚠️ Error inesperado.";
+          mensaje.style.color = "orange";
+        }
+      });
+    });
+
+    const campos = ["linea_editorial", "tipologia", "thema", "area_conocimiento", "materia", "formato", "idioma", "ods", "origen"];
+      fetch("/static/opciones.json")
+        .then(res => res.json())
+        .then(data => {
+          campos.forEach(campo => {
+            const inputOriginal = document.querySelector(`input[name="${campo}"]`);
+            if (!inputOriginal || !data[campo]) return;
+            const select = document.createElement("select");
+            select.name = campo;
+            select.id = campo;
+            select.required = true;
+            select.classList = inputOriginal.classList;
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            const label = campo === "ods"
+            ? "ODS"
+            : campo.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+            placeholder.textContent = `-- Seleccione ${label} --`;
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            select.appendChild(placeholder);
+            data[campo].forEach(opcion => {
+              const opt = document.createElement("option");
+              opt.value = opcion;
+              opt.textContent = opcion;
+              select.appendChild(opt);
+            });
+            if (campo === "origen") {
+              select.addEventListener("change", function () {
+                const inputOtro = document.getElementById("origen_otro");
+                if (this.value === "Otro") {
+                  inputOtro.style.display = "block";
+                  inputOtro.required = true;
+                } else {
+                  inputOtro.style.display = "none";
+                  inputOtro.required = false;
+                }
+              });
+            }
+            inputOriginal.parentNode.replaceChild(select, inputOriginal);
+          });
+        })
+        .catch(error => {
+          console.error("Error cargando opciones:", error);
+        });
+
+        function formatearISBN13(input) {
+          const soloNumeros = input.value.replace(/\D/g, '').slice(0, 13);
+          let formateado = '';
+          if (soloNumeros.length > 0) formateado += soloNumeros.slice(0, 3);
+          if (soloNumeros.length > 3) formateado += '-' + soloNumeros.slice(3, 6);
+          if (soloNumeros.length > 6) formateado += '-' + soloNumeros.slice(6, 9);
+          if (soloNumeros.length > 9) formateado += '-' + soloNumeros.slice(9, 12);
+          if (soloNumeros.length > 12) formateado += '-' + soloNumeros.slice(12, 13);
+          input.value = formateado;
+        }
+
+        ["isbn", "isbn2", "eisbn", "eisbn2"].forEach(id => {
+          const campo = document.getElementById(id);
+          if (campo) {
+            campo.setAttribute("maxlength", "17");
+            campo.addEventListener("input", () => formatearISBN13(campo));
+          }
+        });
+  </script>
+</body>
+</html>
+

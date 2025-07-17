@@ -1,0 +1,38 @@
+<!-- templates/home.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestor de Publicaciones</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f7f7f7;
+            text-align: center;
+            padding: 50px;
+        }
+        h1 {
+            margin-bottom: 40px;
+        }
+        button {
+            font-size: 18px;
+            margin: 20px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            background-color: #0066cc;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #004a99;
+        }
+    </style>
+</head>
+<body>
+    <h1>📚 Sistema de Registro de Publicaciones</h1>
+    <button onclick="location.href='/publicacion'">Agregar Publicación</button>
+    <button onclick="location.href='/autor'">Formulario de Autores</button>
+    <button onclick="location.href='/matriz-intermedia'">Registrar autores en Matriz Intermedia</button>
+</body>
+</html>
