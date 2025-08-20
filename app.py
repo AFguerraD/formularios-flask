@@ -43,7 +43,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # -------------------------
 TBL_AUTORES = "autores_publicaciones"
 COL_AUTOR_ID = "id"
-COL_AUTOR_NOMBRE = "nombre_sin_norm"
+COL_AUTOR_NOMBRE = "nombre"
 COL_AUTOR_DOC = "documento"
 
 TBL_PUBLICACIONES = "publicaciones"
