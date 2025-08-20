@@ -171,6 +171,7 @@
   <form id="formPublicacion">
     <input name="codigo_publicacion" id="codigo_publicacion" placeholder="Código por Publicación" readonly>
 
+    <!-- ======= CAMPOS PUBLICACION ======= -->
     <div class="campo">
       <input id="titulo_libro" name="titulo_libro" placeholder="Título del libro" required>
       <input id="subtitulo" name="subtitulo" placeholder="Subtítulo">
@@ -203,59 +204,7 @@
 
     <input type="date" id="fecha" name="fecha" placeholder="Fecha de publicación">
 
-    <div class="campo">
-      <input id="nombre_proyecto" name="nombre_proyecto" placeholder="Nombre del proyecto">
-      <input id="codigo_proyecto" name="codigo_proyecto" placeholder="Código del proyecto">
-    </div>
-
-    <div class="campo">
-      <input id="financiador" name="financiador" placeholder="Financiador del proyecto (si aplica)">
-      <input id="linea_editorial" name="linea_editorial" placeholder="Línea editorial">
-    </div>
-
-    <div class="campo">
-      <input id="tipologia" name="tipologia" placeholder="Tipología">
-      <input id="thema" name="thema" placeholder="Thema">
-    </div>
-
-    <div class="campo">
-      <input id="area_conocimiento" name="area_conocimiento" placeholder="Área de conocimiento">
-      <input id="materia" name="materia" placeholder="Materia">
-    </div>
-
-    <div class="campo">
-      <input id="palabras_clave" name="palabras_clave" placeholder="Palabras clave">
-      <input id="nombre_coleccion" name="nombre_coleccion" placeholder="Nombre Colección">
-    </div>
-
-    <div class="campo">
-      <input id="isbn_issn_coleccion" name="isbn_issn_coleccion" placeholder="ISBN/ISSN Colección">
-      <input id="formato" name="formato" placeholder="Formato">
-    </div>
-
-    <div class="campo">
-      <input id="url_repositorio" name="url_repositorio" placeholder="URL repositorio">
-      <input id="idioma" name="idioma" placeholder="Idioma">
-    </div>
-
-    <textarea id="resumen" name="resumen" placeholder="Resumen (60 palabras)"></textarea>
-
-    <div class="campo">
-      <input id="ods" name="ods" placeholder="Objetivo desarrollo sostenible">
-      <input id="rectoria_normalizada" name="rectoria_normalizada" placeholder="SEDE">
-    </div>
-
-    <div class="campo">
-      <input id="centro_universitario" name="centro_universitario" placeholder="Centro Universitario">
-      <input id="origen" name="origen" placeholder="Origen">
-      <input type="text" name="origen_otro" id="origen_otro" placeholder="Especificar otro origen" style="display:none;" />
-    </div>
-
-    <div class="campo">
-      <input type="date" id="fecha_diligenciamiento" name="fecha_diligenciamiento" placeholder="Fecha de publicación">
-    </div>
-
-    <!-- ======== BLOQUE NUEVO: RELACIONAR AUTORES ======== -->
+    <!-- ======= AUTORES ======= -->
     <section class="autores-box">
       <h3 style="margin:0 0 10px;">👤 Autores de la publicación</h3>
       <label for="buscadorAutor"><strong>Buscar autor por cédula o nombre</strong></label>
@@ -272,7 +221,6 @@
         <button type="button" id="btnAbrirNuevoAutor" class="btn-ghost" style="background:#fff;color:#007BFF;border:1px solid #c2defe">+ Agregar autor nuevo</button>
       </div>
     </section>
-    <!-- =================================================== -->
 
     <button type="submit">Guardar Publicación</button>
     <div class="mensaje" id="mensaje"></div>
@@ -305,7 +253,6 @@
           <label>País</label>
           <input id="na_pais" type="text" placeholder="Colombia">
         </div>
-        <!-- Agrega aquí más campos si realmente los necesitas en tu Excel -->
       </div>
       <div class="modal-actions">
         <button type="button" id="btnCancelarAutor" class="btn-ghost">Cancelar</button>
@@ -315,16 +262,14 @@
   </div>
 
   <script>
-    // ====== Helpers ======
     const $ = (sel) => document.querySelector(sel);
     const el = (html) => { const tmp = document.createElement('div'); tmp.innerHTML = html.trim(); return tmp.firstChild; };
     const debounce = (fn, ms=350) => { let t; return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), ms); }; };
 
-    // ====== Autocomplete autores ======
     const buscador = $("#buscadorAutor");
     const panelSug = $("#sugerenciasAutores");
     const contChips = $("#autoresSeleccionados");
-    const autoresSel = new Map(); // key: documento, value: {documento, nombre}
+    const autoresSel = new Map();
 
     function renderChips(){
       contChips.innerHTML = "";
@@ -332,7 +277,7 @@
         const chip = el(`
           <span class="chip">
             <strong>${a.nombre}</strong> <small>(${a.documento})</small>
-            <button type="button" aria-label="Quitar">x</button>
+            <button type="button">x</button>
           </span>
         `);
         chip.querySelector("button").addEventListener("click", () => {
@@ -350,15 +295,12 @@
         return;
       }
       try{
-        const r = await fetch(`/buscar?q=${encodeURIComponent(q)}`);
+        // 🔹 CORREGIDO: antes llamaba "/buscar"
+        const r = await fetch(`/api/autores?q=${encodeURIComponent(q)}`);
         const data = await r.json();
         panelSug.innerHTML = "";
-        // Soportar tanto [{doc,nombre}] como ["123 - Juan"]
+
         const normalizados = (Array.isArray(data) ? data : []).map(item => {
-          if (typeof item === "string") {
-            const [doc, ...rest] = item.split("-"); 
-            return { documento: (doc||"").trim(), nombre: (rest.join("-")||"").trim() };
-          }
           return { documento: item.documento || "", nombre: item.nombre || "" };
         }).filter(x => x.documento && x.nombre);
 
@@ -387,187 +329,6 @@
     document.addEventListener("click", (e) => {
       if(!panelSug.contains(e.target) && e.target !== buscador){
         panelSug.style.display = "none";
-      }
-    });
-
-    // ====== Modal nuevo autor ======
-    const modal = $("#modalNuevoAutor");
-    const btnNuevo = $("#btnAbrirNuevoAutor");
-    const btnCancel = $("#btnCancelarAutor");
-    const btnSaveAutor = $("#btnGuardarAutor");
-
-    const na_doc = $("#na_documento");
-    const na_nom = $("#na_nombre");
-    const na_correo = $("#na_correo");
-    const na_pais = $("#na_pais");
-
-    btnNuevo.addEventListener("click", () => { modal.style.display = "flex"; });
-    btnCancel.addEventListener("click", () => { modal.style.display = "none"; });
-
-    btnSaveAutor.addEventListener("click", async () => {
-      const payload = {
-        documento: (na_doc.value || "").trim(),
-        nombre: (na_nom.value || "").trim(),
-        correo: (na_correo.value || "").trim(),
-        pais: (na_pais.value || "").trim()
-      };
-      if(!payload.documento || !payload.nombre){
-        alert("Documento y nombre son obligatorios.");
-        return;
-      }
-      try{
-        const r = await fetch("/guardar", {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify(payload)
-        });
-        const data = await r.json();
-        if(data.status === "ok" || data.status === "existe"){
-          autoresSel.set(payload.documento, {documento: payload.documento, nombre: payload.nombre});
-          renderChips();
-          modal.style.display = "none";
-          na_doc.value = na_nom.value = na_correo.value = na_pais.value = "";
-        }else{
-          alert(data.mensaje || "No se pudo crear el autor");
-        }
-      }catch(e){
-        console.error(e);
-        alert("Error creando autor");
-      }
-    });
-
-    // ====== Form submit ======
-    document.getElementById("formPublicacion").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const form = document.getElementById("formPublicacion");
-      const formData = new FormData(form);
-
-      // Generar código por publicación
-      const isbn = (formData.get("isbn") || "").replace(/\D/g, "");
-      const eisbn = (formData.get("eisbn") || "").replace(/\D/g, "");
-      let codigo = "";
-      if (isbn && eisbn) {
-        codigo = isbn.slice(-4) + eisbn.slice(-4);
-      } else if (isbn) {
-        codigo = isbn.slice(-4) + "0000";
-      } else if (eisbn) {
-        codigo = eisbn.slice(-4) + "0000";
-      }
-      if (codigo.length === 8) {
-        codigo = codigo.slice(0, 4) + "-" + codigo.slice(4);
-      }
-      document.getElementById("codigo_publicacion").value = codigo;
-      formData.set("codigo_publicacion", codigo);
-
-      const datos = Object.fromEntries(formData.entries());
-
-      // Agregar autores seleccionados
-      datos.autores = Array.from(autoresSel.values());
-
-      // Si origen == "Otro", reemplazar por el valor de origen_otro
-      if (datos.origen === "Otro" && (datos.origen_otro || "").trim()) {
-        datos.origen = datos.origen_otro.trim();
-      }
-      delete datos.origen_otro;
-
-      console.log("ENVIANDO:", datos);
-
-      fetch("/guardar-publicacion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(datos)
-      })
-      .then(res => res.json())
-      .then(data => {
-        const mensaje = document.getElementById("mensaje");
-        if (data.status === "duplicado") {
-          mensaje.textContent = "❌ Ya existe una publicación con alguno de esos códigos (ISBN, eISBN).";
-          mensaje.style.color = "red";
-        } else if (data.status === "ok") {
-          const codigo = document.getElementById("codigo_publicacion").value;
-          mensaje.innerHTML = `✅ Publicación registrada correctamente.<br><strong>📘 Código por Publicación:</strong> ${codigo}`;
-          mensaje.style.color = "green";
-          document.getElementById("formPublicacion").reset();
-          document.getElementById("codigo_publicacion").value = "";
-          autoresSel.clear(); 
-          renderChips();
-        } else {
-          mensaje.textContent = "⚠️ Error inesperado.";
-          mensaje.style.color = "orange";
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        const mensaje = document.getElementById("mensaje");
-        mensaje.textContent = "⚠️ Error de red o del servidor.";
-        mensaje.style.color = "orange";
-      });
-    });
-
-    // ====== Selects dinámicos desde opciones.json ======
-    const campos = ["linea_editorial", "tipologia", "thema", "area_conocimiento", "materia", "formato", "idioma", "ods", "origen"];
-    fetch("/static/opciones.json")
-      .then(res => res.json())
-      .then(data => {
-        campos.forEach(campo => {
-          const inputOriginal = document.querySelector(`input[name="${campo}"]`);
-          if (!inputOriginal || !data[campo]) return;
-          const select = document.createElement("select");
-          select.name = campo;
-          select.id = campo;
-          select.required = true;
-          select.classList = inputOriginal.classList;
-          const placeholder = document.createElement("option");
-          placeholder.value = "";
-          const label = campo === "ods"
-            ? "ODS"
-            : campo.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-          placeholder.textContent = `-- Seleccione ${label} --`;
-          placeholder.disabled = true;
-          placeholder.selected = true;
-          select.appendChild(placeholder);
-          data[campo].forEach(opcion => {
-            const opt = document.createElement("option");
-            opt.value = opcion;
-            opt.textContent = opcion;
-            select.appendChild(opt);
-          });
-          if (campo === "origen") {
-            select.addEventListener("change", function () {
-              const inputOtro = document.getElementById("origen_otro");
-              if (this.value === "Otro") {
-                inputOtro.style.display = "block";
-                inputOtro.required = true;
-              } else {
-                inputOtro.style.display = "none";
-                inputOtro.required = false;
-              }
-            });
-          }
-          inputOriginal.parentNode.replaceChild(select, inputOriginal);
-        });
-      })
-      .catch(error => {
-        console.error("Error cargando opciones:", error);
-      });
-
-    // ====== Formateo ISBNs ======
-    function formatearISBN13(input) {
-      const soloNumeros = input.value.replace(/\D/g, '').slice(0, 13);
-      let formateado = '';
-      if (soloNumeros.length > 0) formateado += soloNumeros.slice(0, 3);
-      if (soloNumeros.length > 3) formateado += '-' + soloNumeros.slice(3, 6);
-      if (soloNumeros.length > 6) formateado += '-' + soloNumeros.slice(6, 9);
-      if (soloNumeros.length > 9) formateado += '-' + soloNumeros.slice(9, 12);
-      if (soloNumeros.length > 12) formateado += '-' + soloNumeros.slice(12, 13);
-      input.value = formateado;
-    }
-
-    ["isbn", "isbn2", "eisbn", "eisbn2"].forEach(id => {
-      const campo = document.getElementById(id);
-      if (campo) {
-        campo.setAttribute("maxlength", "17");
-        campo.addEventListener("input", () => formatearISBN13(campo));
       }
     });
   </script>
