@@ -169,7 +169,6 @@ def debug_autores():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-
 # -------------------------
 # Main (local)
 # -------------------------
