@@ -151,7 +151,10 @@ def api_autores():
         query = query.in_(COL_AUTOR_ID, ids_list)
     elif q:
         # Búsqueda por nombre o documento
-        query = query.or_(f"{COL_AUTOR_NOMBRE}.ilike.%{q}%,{COL_AUTOR_DOC}.ilike.%{q}%")
+        query = query.or_(
+            f"{COL_AUTOR_NOMBRE}.ilike.%{q}%,{COL_AUTOR_DOC}.ilike.%{q}%"
+        )
+
 
     res = query.limit(limit).execute()
     data = res.data or []
