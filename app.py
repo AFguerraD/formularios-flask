@@ -159,6 +159,18 @@ def api_autores():
     return jsonify(autores)
 
 # -------------------------
+# Debug: ver columnas reales de autores_publicaciones
+# -------------------------
+@app.route("/debug/autores")
+def debug_autores():
+    try:
+        res = supabase.table(TBL_AUTORES).select("*").limit(5).execute()
+        return jsonify(res.data or [])
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
+# -------------------------
 # Main (local)
 # -------------------------
 if __name__ == "__main__":
