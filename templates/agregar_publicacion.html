@@ -292,7 +292,10 @@
       <h3>➕ Registrar nuevo autor</h3>
       <div class="modal-grid">
         <label>Documento:</label>
-        <input type="text" id="na_documento" required pattern="\d+">
+        <div>
+          <input type="text" id="na_documento" required pattern="\d+">
+          <div id="msgDocumento" class="msg-validacion"></div>
+        </div>
 
         <label>Nombre completo:</label>
         <input type="text" id="na_nombre" required>
@@ -395,14 +398,11 @@
       try{
         const r = await fetch(`/api/autores?q=${encodeURIComponent(q)}`);
         const data = await r.json();
-        console.log("RESPUESTA API:", data);
         panelSug.innerHTML = "";
 
         const normalizados = (Array.isArray(data) ? data : []).map(item => {
           return { documento: item.documento || "", nombre: item.nombre || "" };
         }).filter(x => x.documento && x.nombre);
-
-        console.log("NORMALIZADOS:", normalizados);
 
         if(!normalizados.length){
           panelSug.style.display = "none";
@@ -438,54 +438,68 @@
     const btnCancel = $("#btnCancelarAutor");
     const btnSaveAutor = $("#btnGuardarAutor");
 
-    btnNuevo.addEventListener("click", () => { modal.style.display = "flex"; });
+    const inputDoc = $("#na_documento");
+    const msgDoc = $("#msgDocumento"); // <div id="msgDocumento"> debajo del input documento
+
+    btnNuevo.addEventListener("click", () => { 
+      modal.style.display = "flex"; 
+      resetDocValidation();
+    });
     btnCancel.addEventListener("click", () => { modal.style.display = "none"; });
 
-    btnSaveAutor.addEventListener("click", async () => {
-      const payload = {
-        documento: $("#na_documento").value.trim(),
-        nombre: $("#na_nombre").value.trim(),
-        pseudonimo: $("#na_pseudonimo").value.trim(),
-        sexo: $("#na_sexo").value,
-        perfil: $("#na_perfil").value.trim(),
-        nacionalidad: $("#na_nacionalidad").value.trim(),
-        correo: $("#na_correo").value.trim(),
-        nivel_formacion: $("#na_formacion").value.trim(),
-        rectoria_normalizada: $("#na_rectoria_normalizada").value.trim(),
-        rectoria_original: $("#na_rectoria_original").value.trim(),
-        centro_universitario: $("#na_centro").value.trim(),
-        escuela_facultad: $("#na_facultad").value.trim(),
-        programa_academico: $("#na_programa").value.trim(),
-        filiacion: $("#na_filiacion").value.trim(),
-        pais_filiacion: $("#na_pais").value.trim(),
-        es_investigador: $("#na_investigador").value === "true" 
-      };
+    function resetDocValidation(){
+      msgDoc.textContent = "";
+      msgDoc.className = "";
+      inputDoc.style.borderColor = "";
+      btnSaveAutor.disabled = false;
+    }
 
-      if (!payload.documento || !payload.nombre) {
+    async function validarDocumento(doc){
+      if(!doc){ resetDocValidation(); return; }
+      try {
+        const check = await fetch(`/check_autor/${encodeURIComponent(doc)}`);
+        const resCheck = await check.json();
+        if (resCheck.exists) {
+          msgDoc.textContent = "❌ Ya existe un autor con este documento";
+          msgDoc.className = "msg-error";
+          inputDoc.style.borderColor = "red";
+          btnSaveAutor.disabled = true;
+        } else {
+          msgDoc.textContent = "✅ Documento disponible";
+          msgDoc.className = "msg-ok";
+          inputDoc.style.borderColor = "green";
+          btnSaveAutor.disabled = false;
+        }
+      } catch (e) {
+        console.error("Error validando documento", e);
+      }
+    }
+
+    inputDoc.addEventListener("input", () => {
+      const doc = inputDoc.value.trim();
+      if (doc.length > 3) validarDocumento(doc);
+      else resetDocValidation();
+    });
+
+    btnSaveAutor.addEventListener("click", async () => {
+      const doc = $("#na_documento").value.trim();
+      const nombre = $("#na_nombre").value.trim();
+
+      if (!doc || !nombre) {
         alert("Documento y nombre son obligatorios.");
         return;
       }
 
-      try {
-        const r = await fetch("/guardar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        const data = await r.json();
-
-        if (data.status === "ok") {
-          autoresSel.set(payload.documento, { documento: payload.documento, nombre: payload.nombre });
-          renderChips();
-          modal.style.display = "none";
-          alert("✅ Autor creado correctamente");
-        } else {
-          alert("⚠️ " + (data.mensaje || "No se pudo crear el autor"));
-        }
-      } catch (e) {
-        console.error(e);
-        alert("Error creando autor");
+      if (btnSaveAutor.disabled) {
+        alert("⚠️ Corrija el documento antes de continuar.");
+        return;
       }
+
+      // Si no existe → añadir solo a lista local
+      autoresSel.set(doc, { documento: doc, nombre });
+      renderChips();
+      modal.style.display = "none";
+      alert("✅ Autor agregado localmente. Se guardará al registrar la publicación.");
     });
 
     // ====== Form submit publicación ======
@@ -519,8 +533,6 @@
       }
       delete datos.origen_otro;
 
-      console.log("ENVIANDO:", datos);
-
       fetch("/guardar-publicacion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -529,10 +541,7 @@
       .then(res => res.json())
       .then(data => {
         const mensaje = document.getElementById("mensaje");
-        if (data.status === "duplicado") {
-          mensaje.textContent = "❌ Ya existe una publicación con alguno de esos códigos (ISBN, eISBN).";
-          mensaje.style.color = "red";
-        } else if (data.status === "ok") {
+        if (data.status === "ok") {
           const codigo = document.getElementById("codigo_publicacion").value;
           mensaje.innerHTML = `✅ Publicación registrada correctamente.<br><strong>📘 Código por Publicación:</strong> ${codigo}`;
           mensaje.style.color = "green";
@@ -553,5 +562,6 @@
       });
     });
   </script>
+
 </body>
 </html>

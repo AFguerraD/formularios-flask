@@ -118,7 +118,7 @@ def api_autores():
         query = query.or_(
             f"{COL_AUTOR_NOMBRE}.ilike.%{q}%,{COL_AUTOR_DOC}.ilike.%{q}%"
         )
-        print(f"[DEBUG] Buscando autores con patrón: %{q}%")  # <- aparece en logs
+        print(f"[DEBUG] Buscando autores con patrón: %{q}%")
 
     res = query.limit(limit).execute()
     data = res.data or []
@@ -134,72 +134,69 @@ def api_autores():
     ]
     return jsonify(autores)
 
-@app.route("/guardar", methods=["POST"])
-def guardar_autor():
+# =======================
+# Nuevo endpoint: check autor
+# =======================
+@app.route("/check_autor/<documento>", methods=["GET"])
+def check_autor(documento):
+    res = supabase.table(TBL_AUTORES).select("id").eq("documento", documento).execute()
+    exists = bool(res.data)
+    return jsonify({"exists": exists})
+
+# =======================
+# Guardar publicación (publicación + autores)
+# =======================
+@app.route("/guardar-publicacion", methods=["POST"])
+def guardar_publicacion():
     body = request.get_json(silent=True) or {}
-    if not body.get("documento") or not body.get("nombre"):
-        return jsonify({"status": "error", "mensaje": "Documento y nombre son obligatorios"}), 400
-
-    ahora = datetime.now()
-    fecha = ahora.date().isoformat()
-    hora = ahora.time().strftime("%H:%M:%S")
-
-    autor_insert = {
-        "documento": body.get("documento"),
-        "nombre": body.get("nombre"),
-        "pseudonimo": body.get("pseudonimo"),
-        "sexo": body.get("sexo"),
-        "perfil": body.get("perfil"),
-        "nacionalidad": body.get("nacionalidad"),
-        "correo": body.get("correo"),
-        "nivel_formacion": body.get("nivel_formacion"),
-        "rectoria_normalizada": body.get("rectoria_normalizada"),
-        "rectoria_original": body.get("rectoria_original"),
-        "centro_universitario": body.get("centro_universitario"),
-        "escuela_facultad": body.get("escuela_facultad"),
-        "programa_academico": body.get("programa_academico"),
-        "filiacion": body.get("filiacion"),
-        "pais_filiacion": body.get("pais_filiacion"),
-        "es_investigador": body.get("es_investigador") or False,
-        "fecha_ultimo_diligenciamiento": fecha,
-        "hora_ultimo_diligenciamiento": hora,
-    }
-
-    res = supabase.table("autores_publicaciones").insert(autor_insert).execute()
-    if res.data:
-        return jsonify({"status": "ok", "id": res.data[0]["id"]})
-    return jsonify({"status": "error", "mensaje": "No se pudo guardar el autor"}), 500
-
-@app.route("/publicacion", methods=["POST"])
-def crear_publicacion():
-    if request.is_json:
-        body = request.get_json(silent=True) or {}
-        titulo = (body.get("titulo") or "").strip()
-        autor_ids_raw = body.get("autor_ids") or []
-        if isinstance(autor_ids_raw, str):
-            autor_ids_raw = [autor_ids_raw]
-        autor_ids = _ensure_int_list(autor_ids_raw)
-    else:
-        titulo = (request.form.get("titulo") or "").strip()
-        autor_ids = _ensure_int_list(request.form.getlist("autor_ids"))
+    titulo = (body.get("titulo_libro") or "").strip()
+    autores = body.get("autores") or []
 
     if not titulo:
-        return _json_error("Falta 'titulo' de la publicación.", 400)
+        return jsonify({"status": "error", "mensaje": "Falta título"}), 400
 
-    pub_insert = {COL_PUB_TITULO: titulo}
-    pub_res = supabase.table(TBL_PUBLICACIONES).insert(pub_insert).select(COL_PUB_ID).execute()
+    # 1. Insertar publicación
+    pub_insert = {"titulo": titulo}
+    pub_res = supabase.table(TBL_PUBLICACIONES).insert(pub_insert).select("id").execute()
     if not pub_res.data:
-        return _json_error("No se pudo crear la publicación.", 500)
+        return jsonify({"status": "error", "mensaje": "No se pudo guardar la publicación"}), 500
 
-    publicacion_id = pub_res.data[0][COL_PUB_ID]
+    publicacion_id = pub_res.data[0]["id"]
 
+    # 2. Insertar autores si no existen
+    autor_ids = []
+    for autor in autores:
+        doc = autor.get("documento")
+        nombre = autor.get("nombre")
+        if not doc or not nombre:
+            continue
+
+        # buscar si existe
+        existe = supabase.table(TBL_AUTORES).select("id").eq("documento", doc).execute()
+        if existe.data:
+            autor_id = existe.data[0]["id"]
+        else:
+            ahora = datetime.now()
+            fecha = ahora.date().isoformat()
+            hora = ahora.time().strftime("%H:%M:%S")
+            autor_insert = {
+                "documento": doc,
+                "nombre": nombre,
+                "fecha_ultimo_diligenciamiento": fecha,
+                "hora_ultimo_diligenciamiento": hora,
+            }
+            nuevo = supabase.table(TBL_AUTORES).insert(autor_insert).select("id").execute()
+            autor_id = nuevo.data[0]["id"] if nuevo.data else None
+
+        if autor_id:
+            autor_ids.append(autor_id)
+
+    # 3. Insertar relaciones en matriz_intermedia
     if autor_ids:
         relaciones = [{COL_MAT_PUB_ID: publicacion_id, COL_MAT_AUT_ID: aid} for aid in autor_ids]
         supabase.table(TBL_MATRIZ).insert(relaciones).execute()
 
-    if request.is_json:
-        return jsonify({"ok": True, "publicacion_id": publicacion_id, "autor_ids": autor_ids})
-    return redirect(url_for("formulario_publicacion"))
+    return jsonify({"status": "ok", "publicacion_id": publicacion_id, "autor_ids": autor_ids})
 
 # -------------------------
 # Main
