@@ -1,8 +1,8 @@
-# app.py
 from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response
 import os
 from typing import List, Any
 from pathlib import Path
+from datetime import datetime
 
 # Cargar variables desde .env
 from dotenv import load_dotenv
@@ -133,6 +133,42 @@ def api_autores():
         if a.get(COL_AUTOR_ID) is not None
     ]
     return jsonify(autores)
+
+@app.route("/guardar", methods=["POST"])
+def guardar_autor():
+    body = request.get_json(silent=True) or {}
+    if not body.get("documento") or not body.get("nombre"):
+        return jsonify({"status": "error", "mensaje": "Documento y nombre son obligatorios"}), 400
+
+    ahora = datetime.now()
+    fecha = ahora.date().isoformat()
+    hora = ahora.time().strftime("%H:%M:%S")
+
+    autor_insert = {
+        "documento": body.get("documento"),
+        "nombre": body.get("nombre"),
+        "pseudonimo": body.get("pseudonimo"),
+        "sexo": body.get("sexo"),
+        "perfil": body.get("perfil"),
+        "nacionalidad": body.get("nacionalidad"),
+        "correo": body.get("correo"),
+        "nivel_formacion": body.get("nivel_formacion"),
+        "rectoria_normalizada": body.get("rectoria_normalizada"),
+        "rectoria_original": body.get("rectoria_original"),
+        "centro_universitario": body.get("centro_universitario"),
+        "escuela_facultad": body.get("escuela_facultad"),
+        "programa_academico": body.get("programa_academico"),
+        "filiacion": body.get("filiacion"),
+        "pais_filiacion": body.get("pais_filiacion"),
+        "es_investigador": body.get("es_investigador") or False,
+        "fecha_ultimo_diligenciamiento": fecha,
+        "hora_ultimo_diligenciamiento": hora,
+    }
+
+    res = supabase.table("autores_publicaciones").insert(autor_insert).execute()
+    if res.data:
+        return jsonify({"status": "ok", "id": res.data[0]["id"]})
+    return jsonify({"status": "error", "mensaje": "No se pudo guardar el autor"}), 500
 
 @app.route("/publicacion", methods=["POST"])
 def crear_publicacion():
